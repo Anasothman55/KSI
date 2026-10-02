@@ -1,4 +1,6 @@
 
+from typing import Any
+from sqlalchemy.ext.asyncio.engine import AsyncEngine
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 from sqlalchemy import text
 from sqlalchemy.orm import DeclarativeBase
@@ -10,7 +12,7 @@ class Base(DeclarativeBase):
   pass
 
 
-engine = create_async_engine(
+engine: AsyncEngine = create_async_engine(
   url=settings.db_url,
   echo= False,
 
@@ -29,7 +31,7 @@ SessionLocal = async_sessionmaker(
 )
 
 
-async def db_init():
+async def db_init() -> Any:
   async with engine.begin() as conn:
     await conn.run_sync(Base.metadata.create_all)
 
@@ -37,7 +39,7 @@ async def db_init():
     res = await session.scalar(text('SELECT 1'))
     print(f"Database connection successful: {res}")
 
-async def close_db():
+async def close_db() -> Any:
   await engine.dispose()
 
 

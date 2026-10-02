@@ -10,17 +10,17 @@ from core.types import PHONE_NUMBER_TYPE
 
 
 class UsersStatus(StrEnum):
-  ACTIVE = "active"
-  INACTIVE = "inactive"
-  BANNED = "banned"
-  TERMINATED = "terminated"
+  active = "active"
+  inactive = "inactive"
+  banned = "banned"
+  terminated = "terminated"
 
 class UsersRole(StrEnum):
-  Employee = "employee"
-  Client = "client"
-  Contractor = "contractor"
-  Supplier = "supplier"
-  ContractorEmployee = "contractor_employee"
+  employee = "employee"
+  client = "client"
+  contractor = "contractor"
+  supplier = "supplier"
+  contractor_employee = "contractor_employee"
 
 
 class UsersModel(Base):
@@ -31,10 +31,10 @@ class UsersModel(Base):
   name: Mapped[str] = mapped_column(String(128), unique=True, )
   phone_numbers: Mapped[PHONE_NUMBER_TYPE] = mapped_column(String, nullable=False)
   status: Mapped[UsersStatus] = mapped_column(
-    Enum( UsersStatus, name="users_status_enum", create_type=True,), nullable=False, default=UsersStatus.ACTIVE
+    Enum( UsersStatus, name="users_status_enum", create_type=True,), nullable=False, default=UsersStatus.active
   )
   role: Mapped[UsersRole] = mapped_column(
-    Enum( UsersRole, name="users_role_enum", create_type=True,), nullable=False, default=UsersRole.Employee
+    Enum( UsersRole, name="users_role_enum", create_type=True,), nullable=False, default=UsersRole.employee
   )
   description: Mapped[str | None] = mapped_column(Text, default=None)
 
@@ -46,7 +46,7 @@ class UsersModel(Base):
     lazy='select',
   )
 
-  employees: Mapped[list["UsersModel"]] = relationship(
+  employees: Mapped[list["UsersModel"] | None] = relationship(
     "UsersModel",
     back_populates="manager",
     lazy='select',

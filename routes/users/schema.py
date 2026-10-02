@@ -1,7 +1,7 @@
 import uuid
 from typing import Annotated
 
-from pydantic import StringConstraints, BaseModel, Field
+from pydantic import StringConstraints, BaseModel, Field, ConfigDict
 
 from core.models import UsersStatus, UsersRole
 from core.types import PHONE_NUMBER_TYPE
@@ -23,6 +23,10 @@ class UsersSchema(UsersBaseSchema):
   manager_uid: uuid.UUID | None
   description: DESCRIPTION
 
+  model_config = ConfigDict(
+    from_attributes=True
+  )
+
 class UsersCreateSchema(BaseModel):
   name: NAME
   phone_numbers: PHONE_NUMBER_TYPE
@@ -41,10 +45,34 @@ class UsersUpdateSchema(BaseModel):
 
 
 class UsersCreateResponseSchema(UsersSchema):
-  manager: UsersBaseSchema | None = None
+  pass
+
+class UsersReadManagerSchema(UsersBaseSchema):
+  role: UsersRole
+  model_config = ConfigDict(
+    from_attributes=True
+  )
 
 class UsersReadSchema(UsersSchema):
-  manager: UsersBaseSchema
+  manager: UsersReadManagerSchema | None = None
+  employees: list[UsersSchema]
+
+  model_config = ConfigDict(
+    from_attributes=True
+  )
+
+class UsersReadMultiSchema(UsersSchema):
+  pass
+
+class UsersReadMultiManagerSchema(BaseModel):
+  name: NAME
+
+class UsersReadMultiResDataSchema(UsersReadMultiSchema):
+  manager_name: NAME | None
+
+class UsersReadMultiResSchema(BaseModel):
+  data: list[UsersReadMultiResDataSchema]
+  total_count: int
 
 # class UsersReadMultiSchema(BaseModel):
 #   name: NAME

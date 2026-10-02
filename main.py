@@ -10,7 +10,6 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from core.lifespan import lifespan
 from routes.users.api import api as users_api
 
-
 app = FastAPI(
   title='Kolak Inv API',
   version='0.1.0',
