@@ -58,7 +58,7 @@ async def users(
 ) -> UsersReadSchema:
   return await get(db, uid)
 
-@api.put('/{uid}', response_model=UsersCreateResponseSchema)
+@api.patch('/{uid}', response_model=UsersCreateResponseSchema)
 async def update_user(
     db: Annotated[AsyncSession, Depends(get_db)],
     uid: uuid.UUID,

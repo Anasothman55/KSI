@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from core.config import PROJECT_DATETIME
 from datetime import datetime, date , time
 import uuid
@@ -5,7 +7,7 @@ from enum import StrEnum
 from typing import Optional
 
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy import UUID, String, Text, ARRAY, Enum, ForeignKey, TIMESTAMP, Table, Column
+from sqlalchemy import UUID, String, Text, ARRAY, Enum, ForeignKey, TIMESTAMP, Table, Column, UniqueConstraint, Numeric
 from sqlalchemy.dialects.postgresql import JSONB
 
 from core.db import Base
@@ -69,9 +71,10 @@ item_categories = Table(
 class CategoriesModel(Base):
   __tablename__ = "categories"
 
-  uid: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid7)
+  uid: Mapped[uuid.UUID] = mapped_column(primary_key=True, index=True, default=uuid.uuid7)
   name: Mapped[str] = mapped_column(String(128), unique=True)
   description: Mapped[str | None] = mapped_column(Text, default=None)
+
   items: Mapped[list["ItemsModel"]] = relationship(
     secondary=item_categories,
     back_populates="categories",
@@ -81,7 +84,7 @@ class CategoriesModel(Base):
 class ItemsModel(Base):
   __tablename__ = "items"
 
-  uid: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid7)
+  uid: Mapped[uuid.UUID] = mapped_column(primary_key=True, index=True, default=uuid.uuid7)
   sku: Mapped[str] = mapped_column(String(64), unique=True) 
   brand: Mapped[str | None] = mapped_column(String(128), default=None)
   title: Mapped[str] = mapped_column(String(128))
@@ -93,11 +96,75 @@ class ItemsModel(Base):
       TIMESTAMP(timezone=False), default=PROJECT_DATETIME.get_datetime
   )
   updated_at: Mapped[datetime] = mapped_column(
-    TIMESTAMP(timezone=False),
-    default=PROJECT_DATETIME.get_datetime,
-    onupdate=PROJECT_DATETIME.get_datetime,
+    TIMESTAMP(timezone=False),default=PROJECT_DATETIME.get_datetime,onupdate=PROJECT_DATETIME.get_datetime,
   )
+
   categories: Mapped[list[CategoriesModel]] = relationship(
     secondary=item_categories,
     back_populates="items",
   )
+
+  inventory: Mapped[list["ItemsInventoryModel"]] = relationship(
+    "ItemsInventoryModel",
+    back_populates="item",
+  )
+
+  packaging: Mapped[list["PackagingModel"]] = relationship(
+    "PackagingModel",
+    back_populates="item",
+  )
+
+
+class ItemConditionEnum(StrEnum):
+  new = 'new'
+  used = 'used'
+  damaged = 'damaged'
+  broken = 'broken'
+  lost = 'lost'
+
+class ItemsInventoryModel(Base):
+
+  __tablename__ = "items_inventory"
+
+  uid: Mapped[uuid.UUID] = mapped_column(primary_key=True, index=True, default=uuid.uuid7)
+  condition: Mapped[ItemConditionEnum] = mapped_column(
+    Enum(ItemConditionEnum, name="item_condition_enum", create_type=True), nullable=False, default=ItemConditionEnum.new
+  )
+  owner: Mapped[str] = mapped_column(String(64), nullable=False)
+
+  item_uid: Mapped[uuid.UUID] = mapped_column(ForeignKey("items.uid", ondelete="CASCADE"), nullable=False)
+  item: Mapped["ItemsModel"] = relationship("ItemsModel", back_populates="inventory")
+
+  created_at: Mapped[datetime] = mapped_column(
+      TIMESTAMP(timezone=False), default=PROJECT_DATETIME.get_datetime
+  )
+  updated_at: Mapped[datetime] = mapped_column(
+    TIMESTAMP(timezone=False),default=PROJECT_DATETIME.get_datetime,onupdate=PROJECT_DATETIME.get_datetime,
+  )
+
+  __table_args__ = (
+    UniqueConstraint("item_uid", "owner", 'condition'),
+  )
+
+
+class PackagingModel(Base):
+  __tablename__ = "packaging"
+
+  uid: Mapped[uuid.UUID] = mapped_column(primary_key=True, index=True, default=uuid.uuid7)
+  name: Mapped[str] = mapped_column(String(128), nullable=False)
+  unit: Mapped[str] = mapped_column(String(32), nullable=False)
+  change_rate: Mapped[Decimal] = mapped_column(Numeric, nullable=False)
+
+  item_uid: Mapped[uuid.UUID] = mapped_column(ForeignKey("items.uid", ondelete="CASCADE"), nullable=False)
+
+  item: Mapped["ItemsModel"] = relationship("ItemsModel", back_populates="packaging")
+
+  __table_args__ = (
+    UniqueConstraint("item_uid", "name"),
+  )
+
+
+
+
+
+

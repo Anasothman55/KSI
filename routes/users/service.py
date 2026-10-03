@@ -11,6 +11,7 @@ import uuid
 from rich import print
 
 from core.models import UsersModel
+from routes.shared.func import integrity_error_raise
 from routes.users.schema import (
   UsersCreateSchema,
   UsersCreateResponseSchema,
@@ -39,20 +40,7 @@ def integrity(func):
       ) from e
     except IntegrityError as e:
       await db.rollback()
-      orig = str(e.orig)
-      parts = orig.split("\n", 1)
-      error = parts[0]
-      extra = parts[1] if len(parts) > 1 else ""
-      field, value = re.findall(r"\((.*?)\)", extra)
-      raise HTTPException(
-        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-        detail={
-          "error": error,
-          "message": extra,
-          "field": field,
-          "value": value,
-        },
-      ) from e
+      integrity_error_raise(e)
   return wrapper
 
 
@@ -193,11 +181,12 @@ async def update(
     object=body.model_dump(exclude_unset=True),
     schema_to_select=UsersCreateResponseSchema,
     return_as_model=True,
-    commit=False,
     uid=uid,
   )
 
-  await db.commit()
+  if updated_user is None:
+    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"User with uid {uid} not found",)
+
   return updated_user
 
 async def delete(

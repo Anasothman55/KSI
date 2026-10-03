@@ -2,7 +2,6 @@ import uuid
 from typing import Annotated
 
 from pydantic import StringConstraints, BaseModel, Field, ConfigDict
-from phonenumbers import PhoneNumber
 
 from core.models import UsersStatus, UsersRole
 from core.types import PHONE_NUMBER_TYPE
