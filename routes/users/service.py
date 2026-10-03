@@ -166,35 +166,35 @@ async def update(
     visited: set[uuid.UUID] = set()
 
     while current_uid is not None:
+      
       if current_uid in visited:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT,detail="Existing management cycle detected in hierarchy",)
 
       visited.add(current_uid)
 
-      row = (
-        await db.execute(
-          select(UsersModel.uid, UsersModel.manager_uid)
-          .where(UsersModel.uid == current_uid)
-          .with_for_update()
-        )
-      ).one_or_none()
+      row = (await db.execute(
+        select(UsersModel.uid, UsersModel.manager_uid)
+        .where(UsersModel.uid == current_uid)
+        .with_for_update()
+      )).one_or_none()
 
-      if row is None: raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Manager not found",)
+      if row is None: 
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Manager not found",)
 
       row_uid, parent_uid = row
 
-      if row_uid == uid: raise HTTPException(status_code=status.HTTP_409_CONFLICT,detail="Invalid manager: this would create a management cycle",)
+      if row_uid == uid: 
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT,detail="Invalid manager: this would create a management cycle",)
 
       current_uid = parent_uid
 
-  # 3. Apply the update (exclude_unset lets manager_uid be explicitly set to null)
   updated_user = await user_crud.update(
-      db=db,
-      object=body.model_dump(exclude_unset=True),
-      schema_to_select=UsersCreateResponseSchema,
-      return_as_model=True,
-      commit=False,
-      uid=uid,
+    db=db,
+    object=body.model_dump(exclude_unset=True),
+    schema_to_select=UsersCreateResponseSchema,
+    return_as_model=True,
+    commit=False,
+    uid=uid,
   )
 
   await db.commit()

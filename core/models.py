@@ -1,9 +1,12 @@
+from core.config import PROJECT_DATETIME
+from datetime import datetime, date , time
 import uuid
 from enum import StrEnum
 from typing import Optional
 
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy import UUID, String, Text, ARRAY, Enum, ForeignKey
+from sqlalchemy import UUID, String, Text, ARRAY, Enum, ForeignKey, TIMESTAMP, Table, Column
+from sqlalchemy.dialects.postgresql import JSONB
 
 from core.db import Base
 from core.types import PHONE_NUMBER_TYPE
@@ -55,4 +58,46 @@ class UsersModel(Base):
 
 
 
+item_categories = Table(
+  "item_categories",
+  Base.metadata,
+  Column("item_uid", ForeignKey("items.uid", ondelete="CASCADE"), primary_key=True),
+  Column("category_uid", ForeignKey("categories.uid", ondelete="CASCADE"), primary_key=True),
+)
 
+
+class CategoriesModel(Base):
+  __tablename__ = "categories"
+
+  uid: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid7)
+  name: Mapped[str] = mapped_column(String(128), unique=True)
+  description: Mapped[str | None] = mapped_column(Text, default=None)
+  items: Mapped[list["ItemsModel"]] = relationship(
+    secondary=item_categories,
+    back_populates="categories",
+  )
+
+
+class ItemsModel(Base):
+  __tablename__ = "items"
+
+  uid: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid7)
+  sku: Mapped[str] = mapped_column(String(64), unique=True) 
+  brand: Mapped[str | None] = mapped_column(String(128), default=None)
+  title: Mapped[str] = mapped_column(String(128))
+  formal_name: Mapped[str | None] = mapped_column(String(128), default=None)
+  base_unit: Mapped[str] = mapped_column(String(32))
+  description: Mapped[str | None] = mapped_column(Text, default=None)
+  extra: Mapped[dict | None] = mapped_column(JSONB, default=None)
+  created_at: Mapped[datetime] = mapped_column(
+      TIMESTAMP(timezone=False), default=PROJECT_DATETIME.get_datetime
+  )
+  updated_at: Mapped[datetime] = mapped_column(
+    TIMESTAMP(timezone=False),
+    default=PROJECT_DATETIME.get_datetime,
+    onupdate=PROJECT_DATETIME.get_datetime,
+  )
+  categories: Mapped[list[CategoriesModel]] = relationship(
+    secondary=item_categories,
+    back_populates="items",
+  )

@@ -2,6 +2,7 @@ import uuid
 from typing import Annotated
 
 from pydantic import StringConstraints, BaseModel, Field, ConfigDict
+from phonenumbers import PhoneNumber
 
 from core.models import UsersStatus, UsersRole
 from core.types import PHONE_NUMBER_TYPE
@@ -29,19 +30,19 @@ class UsersSchema(UsersBaseSchema):
 
 class UsersCreateSchema(BaseModel):
   name: NAME
-  phone_numbers: PHONE_NUMBER_TYPE
+  phone_numbers: PHONE_NUMBER_TYPE = Field(examples=["07503357676"])
   status: UsersStatus
   role: UsersRole
   manager_uid: uuid.UUID | None
   description: DESCRIPTION
 
 class UsersUpdateSchema(BaseModel):
-  name: NAME | None
-  phone_numbers: PHONE_NUMBER_TYPE | None
-  status: UsersStatus | None
-  role: UsersRole | None
-  manager_uid: uuid.UUID | None
-  description: DESCRIPTION | None
+  name: NAME | None = None
+  phone_numbers: PHONE_NUMBER_TYPE | None = Field(None,examples=["07503357676"])
+  status: UsersStatus | None = None
+  role: UsersRole | None = None
+  manager_uid: uuid.UUID | None = None
+  description: DESCRIPTION | None = None
 
 
 class UsersCreateResponseSchema(UsersSchema):
