@@ -119,19 +119,22 @@ class UnitEnum(StrEnum):
   INCH = "in"
   FOOT = "ft"
 
+
+
 class ItemsModel(Base):
   __tablename__ = "items"
-
+  
   uid: Mapped[uuid.UUID] = mapped_column(primary_key=True, index=True, default=uuid.uuid7)
   sku: Mapped[str] = mapped_column(String(64), unique=True) 
   brand: Mapped[str | None] = mapped_column(String(128), default=None)
   title: Mapped[str] = mapped_column(String(128))
   formal_name: Mapped[str] = mapped_column(String(128), )
   base_unit: Mapped[UnitEnum] = mapped_column(
-    Enum(UnitEnum, name="unit_enum", create_type=True), nullable=False, default=UnitEnum.PIECE.value
+    Enum(UnitEnum, name="unit_enum", create_type=True, values_callable=lambda e: [m.value for m in e]), nullable=False, default=UnitEnum.PIECE.value
   )
   description: Mapped[str | None] = mapped_column(Text, default=None)
   extra: Mapped[dict | None] = mapped_column(JSONB, default=None)
+  variant_uid: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("items_variant.uid", ondelete="RESTRICT", onupdate="RESTRICT"), nullable=True)
   created_at: Mapped[datetime] = mapped_column(
     TIMESTAMP(timezone=False), default=PROJECT_DATETIME.get_datetime
   )
@@ -152,6 +155,24 @@ class ItemsModel(Base):
   packaging: Mapped[list[PackagingModel]] = relationship(
     "PackagingModel",
     back_populates="item",
+  )
+
+  variant: Mapped[ItemsVariantModel | None] = relationship(
+    "ItemsVariantModel",
+    back_populates="items",
+  ) 
+
+
+class ItemsVariantModel(Base):
+  __tablename__ = "items_variant"
+
+  uid: Mapped[uuid.UUID] = mapped_column(primary_key=True, index=True, default=uuid.uuid7)
+  name: Mapped[str] = mapped_column(String(128), nullable=False, unique=True)
+  sku_name: Mapped[str] = mapped_column(String(5), nullable=False, unique=True)
+
+  items: Mapped[list[ItemsModel]] = relationship(
+    "ItemsModel",
+    back_populates="variant",
   )
 
 

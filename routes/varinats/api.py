@@ -7,16 +7,13 @@ from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.deps import get_db
-from routes.items.service import create, delete, read, read_multi, update
+from routes.variants.service import create, delete, read, read_multi, update
 
-from routes.items.schema import (
-  ItemsCreateSchema,
-  ItemsUpdateSchema,
-)
+
 
 api = APIRouter(
-  prefix="/items",
-  tags=["Items"],
+  prefix="/variants",
+  tags=["Variants"],
 )
 
 @api.get('/enum')
@@ -30,15 +27,15 @@ async def get_enum():
 
 
 @api.post("/", response_model=Any)
-async def create_item(
+async def create_variant(
     db: Annotated[AsyncSession, Depends(get_db)],
-    body: ItemsCreateSchema,
+    body: Any,
 ):
   return await create(db=db, body=body)
 
 
 @api.get("/", response_model=Any)
-async def read_items(
+async def read_variants(
     db: Annotated[AsyncSession, Depends(get_db)],
     name: Annotated[str | None, Query(max_length=128)] = None
 ):
@@ -46,7 +43,7 @@ async def read_items(
 
 
 @api.get("/{uid}")
-async def read_item(
+async def read_variant(
     db: Annotated[AsyncSession, Depends(get_db)],
     uid: uuid.UUID,
 ):
@@ -54,7 +51,7 @@ async def read_item(
 
 
 @api.patch("/{uid}", response_model=Any, status_code=status.HTTP_200_OK)
-async def update_item(
+async def update_variant(
     db: Annotated[AsyncSession, Depends(get_db)],
     uid: uuid.UUID,
     body: Any,
@@ -63,7 +60,7 @@ async def update_item(
 
 
 @api.delete("/{uid}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_item(
+async def delete_variant(
     db: Annotated[AsyncSession, Depends(get_db)],
     uid: uuid.UUID
 ):
