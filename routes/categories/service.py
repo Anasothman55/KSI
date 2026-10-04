@@ -1,19 +1,17 @@
 import uuid
 
 from fastapi import HTTPException, status
-from fastapi.responses import JSONResponse
 from fastcrud import FastCRUD
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload
 
 from core.models import CategoriesModel
 from routes.categories.schema import (
-  CategoriesCreateSchema,
-  CategoriesUpdateSchema,
   CategoriesCreateResponseSchema,
+  CategoriesCreateSchema,
   CategoriesRaedMultiSchema,
+  CategoriesUpdateSchema,
 )
 from routes.shared.func import integrity_error_raise
 

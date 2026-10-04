@@ -1,15 +1,24 @@
+import uuid
+from datetime import datetime
 from decimal import Decimal
+from enum import StrEnum
+
+from sqlalchemy import (
+  TIMESTAMP,
+  UUID,
+  Column,
+  Enum,
+  ForeignKey,
+  Numeric,
+  String,
+  Table,
+  Text,
+  UniqueConstraint,
+)
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from core.config import PROJECT_DATETIME
-from datetime import datetime, date , time
-import uuid
-from enum import StrEnum
-from typing import Optional
-
-from sqlalchemy.orm import Mapped, mapped_column, relationship
-from sqlalchemy import UUID, String, Text, ARRAY, Enum, ForeignKey, TIMESTAMP, Table, Column, UniqueConstraint, Numeric
-from sqlalchemy.dialects.postgresql import JSONB
-
 from core.db import Base
 from core.types import PHONE_NUMBER_TYPE
 
@@ -44,14 +53,14 @@ class UsersModel(Base):
   description: Mapped[str | None] = mapped_column(Text, default=None)
 
   manager_uid: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.uid", ondelete='SET NULL'), nullable=True)
-  manager: Mapped[Optional["UsersModel"]] = relationship(
+  manager: Mapped[UsersModel | None] = relationship(
     "UsersModel",
     remote_side=[uid],
     back_populates="employees",
     lazy='select',
   )
 
-  employees: Mapped[list["UsersModel"] | None] = relationship(
+  employees: Mapped[list[UsersModel] | None] = relationship(
     "UsersModel",
     back_populates="manager",
     lazy='select',
@@ -75,11 +84,40 @@ class CategoriesModel(Base):
   name: Mapped[str] = mapped_column(String(128), unique=True)
   description: Mapped[str | None] = mapped_column(Text, default=None)
 
-  items: Mapped[list["ItemsModel"]] = relationship(
+  items: Mapped[list[ItemsModel]] = relationship(
     secondary=item_categories,
     back_populates="categories",
   )
 
+
+class UnitEnum(StrEnum):
+  """Units of measure for inventory items."""
+
+  # Count
+  PIECE = "pc"
+  DOZEN = "dz"
+  PACK = "pk"
+  BOX = "box"
+  CARTON = "ctn"
+  PALLET = "plt"
+  # Weight
+  MILLIGRAM = "mg"
+  GRAM = "g"
+  KILOGRAM = "kg"
+  OUNCE = "oz"
+  POUND = "lb"
+  TON = "t"
+  # Volume
+  MILLILITER = "ml"
+  LITER = "l"
+  FLUID_OUNCE = "fl oz"
+  GALLON = "gal"
+  # Length
+  MILLIMETER = "mm"
+  CENTIMETER = "cm"
+  METER = "m"
+  INCH = "in"
+  FOOT = "ft"
 
 class ItemsModel(Base):
   __tablename__ = "items"
@@ -88,12 +126,14 @@ class ItemsModel(Base):
   sku: Mapped[str] = mapped_column(String(64), unique=True) 
   brand: Mapped[str | None] = mapped_column(String(128), default=None)
   title: Mapped[str] = mapped_column(String(128))
-  formal_name: Mapped[str | None] = mapped_column(String(128), default=None)
-  base_unit: Mapped[str] = mapped_column(String(32))
+  formal_name: Mapped[str] = mapped_column(String(128), )
+  base_unit: Mapped[UnitEnum] = mapped_column(
+    Enum(UnitEnum, name="unit_enum", create_type=True), nullable=False, default=UnitEnum.PIECE.value
+  )
   description: Mapped[str | None] = mapped_column(Text, default=None)
   extra: Mapped[dict | None] = mapped_column(JSONB, default=None)
   created_at: Mapped[datetime] = mapped_column(
-      TIMESTAMP(timezone=False), default=PROJECT_DATETIME.get_datetime
+    TIMESTAMP(timezone=False), default=PROJECT_DATETIME.get_datetime
   )
   updated_at: Mapped[datetime] = mapped_column(
     TIMESTAMP(timezone=False),default=PROJECT_DATETIME.get_datetime,onupdate=PROJECT_DATETIME.get_datetime,
@@ -104,12 +144,12 @@ class ItemsModel(Base):
     back_populates="items",
   )
 
-  inventory: Mapped[list["ItemsInventoryModel"]] = relationship(
+  inventory: Mapped[list[ItemsInventoryModel]] = relationship(
     "ItemsInventoryModel",
     back_populates="item",
   )
 
-  packaging: Mapped[list["PackagingModel"]] = relationship(
+  packaging: Mapped[list[PackagingModel]] = relationship(
     "PackagingModel",
     back_populates="item",
   )
@@ -133,7 +173,7 @@ class ItemsInventoryModel(Base):
   owner: Mapped[str] = mapped_column(String(64), nullable=False)
 
   item_uid: Mapped[uuid.UUID] = mapped_column(ForeignKey("items.uid", ondelete="CASCADE"), nullable=False)
-  item: Mapped["ItemsModel"] = relationship("ItemsModel", back_populates="inventory")
+  item: Mapped[ItemsModel] = relationship("ItemsModel", back_populates="inventory")
 
   created_at: Mapped[datetime] = mapped_column(
       TIMESTAMP(timezone=False), default=PROJECT_DATETIME.get_datetime
@@ -157,7 +197,7 @@ class PackagingModel(Base):
 
   item_uid: Mapped[uuid.UUID] = mapped_column(ForeignKey("items.uid", ondelete="CASCADE"), nullable=False)
 
-  item: Mapped["ItemsModel"] = relationship("ItemsModel", back_populates="packaging")
+  item: Mapped[ItemsModel] = relationship("ItemsModel", back_populates="packaging")
 
   __table_args__ = (
     UniqueConstraint("item_uid", "name"),

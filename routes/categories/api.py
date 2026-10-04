@@ -1,18 +1,18 @@
-from typing import Annotated
 import uuid
+from typing import Annotated
 
-from fastapi import APIRouter, Depends, status, Query, Path
+from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.deps import get_db
-from routes.categories.service import create, read_multi, read, delete, update
 from routes.categories.schema import (
   CategoriesCreateResponseSchema,
   CategoriesCreateSchema,
   CategoriesReadMultiResponseShema,
+  CategoriesUpdateResponseSchema,
   CategoriesUpdateSchema,
-  CategoriesUpdateResponseSchema
 )
+from routes.categories.service import create, delete, read, read_multi, update
 
 api = APIRouter(
   prefix="/categories",
