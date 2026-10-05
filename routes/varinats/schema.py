@@ -1,7 +1,9 @@
 import uuid
-from typing import Annotated
+from typing import Annotated, TYPE_CHECKING
 
 from pydantic import BaseModel, StringConstraints
+
+
 
 VariantName = Annotated[
   str, StringConstraints(max_length=128, min_length=2, strip_whitespace=True)
@@ -24,7 +26,7 @@ class ItemsVariantCreateSchema(ItemsVariantBaseSchema):
 
 class ItemsVariantUpdateSchema(BaseModel):
   name: VariantName | None = None
-  sku_name: VariantSkuCode | None = None
+  sku_code: VariantSkuCode
 
 
 class ItemsVariantReadSchema(ItemsVariantSchema):
@@ -32,6 +34,10 @@ class ItemsVariantReadSchema(ItemsVariantSchema):
 
 class ItemsVariantReadMultiSchema(ItemsVariantSchema):
   pass
+
+class ItemsVariantReadCodeSchema(BaseModel):
+  sku_code: VariantSkuCode
+
 
 #! response
 

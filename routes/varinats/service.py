@@ -1,6 +1,8 @@
 import uuid
+from typing import cast, Any
 
 from fastcrud import FastCRUD, compute_offset, paginated_response
+from fastcrud.types import GetMultiResponseModel
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -49,14 +51,14 @@ async def read(
 async def read_multi(
   db: AsyncSession,
   name: str | None = None, 
-  page: int = 1,
+  page: int  = 1,
   items_per_page: int = 10,
 ):
   filters = {}
   if name is not None:
     filters['name__ilike'] = f"%{name}%"
   
-  data=  await variant_crud.get_multi(
+  data = await variant_crud.get_multi(
     db=db,
     schema_to_select=ItemsVariantReadMultiSchema,
     offset=compute_offset(page, items_per_page),
@@ -64,13 +66,11 @@ async def read_multi(
     **filters
   )
 
-
   return paginated_response(
-    crud_data=data,
+    crud_data={**data},
     page=page,
     items_per_page=items_per_page,
   )
-
 
 async def update(
   db: AsyncSession, 

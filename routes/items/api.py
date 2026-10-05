@@ -11,6 +11,7 @@ from routes.items.schema import (
   ItemsCreateResponseSchema,
   ItemsCreateSchema,
   ItemsUpdateSchema,
+  ItemsReadMultiResponseSchema
 )
 from routes.items.service import create, delete, read, read_multi, update
 
@@ -37,12 +38,14 @@ async def create_item(
   return await create(db=db, body=body)
 
 
-@api.get("/", response_model=Any)
+@api.get("/", response_model=ItemsReadMultiResponseSchema)
 async def read_items(
     db: Annotated[AsyncSession, Depends(get_db)],
-    name: Annotated[str | None, Query(max_length=128)] = None
+    name: Annotated[str | None, Query(max_length=128)] = None,
+    page: Annotated[int | None, Query(ge=1)] = 1,
+    items_per_page: Annotated[int | None, Query(ge=1, le=100)] = 100
 ):
-  return await read_multi(db=db, name=name)
+  return await read_multi(db=db, name=name, page=page or 1, items_per_page=items_per_page or 10)
 
 
 @api.get("/{uid}")

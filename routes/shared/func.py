@@ -27,7 +27,7 @@ def integrity_error_raise(e: IntegrityError):
 
     # UNIQUE
     if isinstance(orig, errors.UniqueViolation):
-        detail = orig.detail or ""
+        detail = str(orig) or ""
 
         match = re.search(
             r"Key \((?P<field>.*?)\)=\((?P<value>.*?)\) already exists",
@@ -41,13 +41,12 @@ def integrity_error_raise(e: IntegrityError):
                 "message": "A record with this value already exists.",
                 "field": match.group("field") if match else None,
                 "value": match.group("value") if match else None,
-                "constraint": orig.constraint_name,
             },
         ) from e
 
     # FOREIGN KEY / RESTRICT
     if isinstance(orig, errors.ForeignKeyViolation):
-        detail = orig.detail or ""
+        detail = str(orig) or ""
 
         # DELETE/UPDATE RESTRICT
         match = re.search(
@@ -67,22 +66,9 @@ def integrity_error_raise(e: IntegrityError):
                 "field": match.group("field") if match else None,
                 "value": match.group("value") if match else None,
                 "referenced_table": match.group("table") if match else None,
-                "constraint": orig.constraint_name,
             },
         ) from e
 
-    # NOT NULL
-    if isinstance(orig, errors.NotNullViolation):
-        raise HTTPException(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            detail={
-                "error": "not_null_violation",
-                "message": f"Field '{orig.column_name}' cannot be null.",
-                "field": orig.column_name,
-                "value": None,
-                "constraint": orig.constraint_name,
-            },
-        ) from e
 
     # Unknown integrity error
     raise HTTPException(
