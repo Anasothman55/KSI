@@ -1,5 +1,3 @@
-from core.models import UnitEnum
-from fastapi.responses import JSONResponse
 import uuid
 from typing import Annotated, Any
 
@@ -7,42 +5,41 @@ from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.deps import get_db
-from routes.variants.service import create, delete, read, read_multi, update
-
-
+from routes.varinats.service import create, delete, read, read_multi, update
+from routes.varinats.schema import (
+  ItemsVariantCreateSchema,
+  ItemsVariantCreateResponseSchema,
+  ItemsVariantReadResponseSchema,
+  ItemsVariantReadMultiResponseSchema,
+  ItemsVariantUpdateResponseSchema
+)
 
 api = APIRouter(
   prefix="/variants",
   tags=["Variants"],
 )
 
-@api.get('/enum')
-async def get_enum():
-  return JSONResponse(
-    status_code=status.HTTP_200_OK,
-    content={
-      'unit': {r.name: r.value for r in UnitEnum},
-    }
-  )
 
 
-@api.post("/", response_model=Any)
+@api.post("/", response_model=ItemsVariantCreateResponseSchema)
 async def create_variant(
     db: Annotated[AsyncSession, Depends(get_db)],
-    body: Any,
+    body: ItemsVariantCreateSchema,
 ):
   return await create(db=db, body=body)
 
 
-@api.get("/", response_model=Any)
+@api.get("/", response_model=ItemsVariantReadMultiResponseSchema)
 async def read_variants(
     db: Annotated[AsyncSession, Depends(get_db)],
-    name: Annotated[str | None, Query(max_length=128)] = None
+    name: Annotated[str | None, Query(max_length=128)] = None,
+    page: Annotated[int | None, Query(ge=1)] = 1,
+    items_per_page: Annotated[int | None, Query(ge=1, le=100)] = 100
 ):
-  return await read_multi(db=db, name=name)
+  return await read_multi(db=db, name=name, page=page, items_per_page=items_per_page)
 
 
-@api.get("/{uid}")
+@api.get("/{uid}", response_model=ItemsVariantReadResponseSchema)
 async def read_variant(
     db: Annotated[AsyncSession, Depends(get_db)],
     uid: uuid.UUID,
@@ -50,7 +47,7 @@ async def read_variant(
   return await read(db=db, uid=uid)
 
 
-@api.patch("/{uid}", response_model=Any, status_code=status.HTTP_200_OK)
+@api.patch("/{uid}", response_model=ItemsVariantUpdateResponseSchema, status_code=status.HTTP_200_OK)
 async def update_variant(
     db: Annotated[AsyncSession, Depends(get_db)],
     uid: uuid.UUID,

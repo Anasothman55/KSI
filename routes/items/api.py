@@ -1,18 +1,18 @@
-from core.models import UnitEnum
-from fastapi.responses import JSONResponse
 import uuid
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, Query, status
+from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.deps import get_db
-from routes.items.service import create, delete, read, read_multi, update
-
+from core.models import UnitEnum
 from routes.items.schema import (
+  ItemsCreateResponseSchema,
   ItemsCreateSchema,
   ItemsUpdateSchema,
 )
+from routes.items.service import create, delete, read, read_multi, update
 
 api = APIRouter(
   prefix="/items",
@@ -29,7 +29,7 @@ async def get_enum():
   )
 
 
-@api.post("/", response_model=Any)
+@api.post("/", response_model=ItemsCreateResponseSchema)
 async def create_item(
     db: Annotated[AsyncSession, Depends(get_db)],
     body: ItemsCreateSchema,

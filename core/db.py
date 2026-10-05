@@ -1,4 +1,6 @@
+from psycopg import OperationalError as PsycopgOperationalError
 
+from sqlalchemy.exc import OperationalError
 from typing import Any
 from sqlalchemy.ext.asyncio.engine import AsyncEngine
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
@@ -12,6 +14,8 @@ class Base(DeclarativeBase):
   pass
 
 
+
+
 engine: AsyncEngine = create_async_engine(
   url=settings.db_url,
   echo= False,
@@ -21,7 +25,7 @@ engine: AsyncEngine = create_async_engine(
   pool_timeout=30,
   pool_recycle=3600,
   pool_pre_ping=True,
-)
+) 
 
 
 SessionLocal = async_sessionmaker(
@@ -32,8 +36,18 @@ SessionLocal = async_sessionmaker(
 
 
 async def db_init() -> Any:
-  async with engine.begin() as conn:
-    await conn.run_sync(Base.metadata.create_all)
+  try: 
+    async with engine.begin() as conn:
+      await conn.run_sync(Base.metadata.create_all)
+  
+  except OperationalError as e:
+    if isinstance(e.orig, PsycopgOperationalError):
+      print("PostgreSQL connection failed")
+      print(e.orig)
+      
+    else:
+      print("SQLAlchemy operational error:", e)
+    
 
   async with SessionLocal() as session:
     res = await session.scalar(text('SELECT 1'))

@@ -3,11 +3,8 @@ import uuid
 from datetime import datetime
 from typing import Annotated
 
-from pydantic import BaseModel, StringConstraints
+from pydantic import BaseModel, StringConstraints, Field, ConfigDict
 
-ItemsSku = Annotated[
-  str, StringConstraints(max_length=64)
-]
 ItemsBrand = Annotated[ #? nullable
   str, StringConstraints(max_length=128, min_length=2, pattern=r"^[A-Za-z0-9_]+$", strip_whitespace=True)
 ]
@@ -27,7 +24,7 @@ class ItemsBaseSchema(BaseModel):
 
 class ItemsSchema(ItemsBaseSchema):
   uid: uuid.UUID
-  sku: ItemsSku
+  sku_number: int
   brand: ItemsBrand | None = None
   formal_name: ItemsFormalName
   description: str | None = None
@@ -37,11 +34,17 @@ class ItemsSchema(ItemsBaseSchema):
 
 
 class ItemsCreateSchema(ItemsBaseSchema):
+  sku_number: int = Field(exclude=True, ge=1)
   brand: ItemsBrand | None = None
+  variant_uid: uuid.UUID
   formal_name: ItemsFormalName
   description: str | None = None
   extra: dict | None = None
 
+  model_config = ConfigDict(
+    extra="forbid",
+    str_strip_whitespace=True
+  )
 
 class ItemsUpdateSchema(BaseModel):
   title: ItemsTitle | None = None
@@ -56,7 +59,8 @@ class ItemsUpdateSchema(BaseModel):
 
 #! response
 
-
+class ItemsCreateResponseSchema(ItemsSchema):
+  pass
 
 
 

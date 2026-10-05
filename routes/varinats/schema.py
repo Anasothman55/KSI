@@ -7,14 +7,14 @@ VariantName = Annotated[
   str, StringConstraints(max_length=128, min_length=2, strip_whitespace=True)
 ]
 
-VariantSkuName = Annotated[
+VariantSkuCode = Annotated[
   str, StringConstraints(max_length=5, min_length=1, strip_whitespace=True)
 ]
 
 
 class ItemsVariantBaseSchema(BaseModel):
   name: VariantName
-  sku_name: VariantSkuName
+  sku_code: VariantSkuCode
 
 class ItemsVariantSchema(ItemsVariantBaseSchema):
   uid: uuid.UUID
@@ -24,7 +24,7 @@ class ItemsVariantCreateSchema(ItemsVariantBaseSchema):
 
 class ItemsVariantUpdateSchema(BaseModel):
   name: VariantName | None = None
-  sku_name: VariantSkuName | None = None
+  sku_name: VariantSkuCode | None = None
 
 
 class ItemsVariantReadSchema(ItemsVariantSchema):
@@ -50,5 +50,6 @@ class ItemsVariantReadResponseSchema(ItemsVariantResponseSchema):
 class ItemsVariantReadMultiResponseSchema(BaseModel):
   data: list[ItemsVariantReadMultiSchema]
   total_count: int
-  offset: int
-  limit: int
+  has_more: bool
+  page: int
+  items_per_page: int

@@ -14,6 +14,7 @@ from sqlalchemy import (
   Table,
   Text,
   UniqueConstraint,
+  Integer
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -125,7 +126,7 @@ class ItemsModel(Base):
   __tablename__ = "items"
   
   uid: Mapped[uuid.UUID] = mapped_column(primary_key=True, index=True, default=uuid.uuid7)
-  sku: Mapped[str] = mapped_column(String(64), unique=True) 
+  sku_number: Mapped[int] = mapped_column(Integer,nullable=False,)
   brand: Mapped[str | None] = mapped_column(String(128), default=None)
   title: Mapped[str] = mapped_column(String(128))
   formal_name: Mapped[str] = mapped_column(String(128), )
@@ -160,15 +161,22 @@ class ItemsModel(Base):
   variant: Mapped[ItemsVariantModel | None] = relationship(
     "ItemsVariantModel",
     back_populates="items",
-  ) 
+  )
 
+  __table_args__ = (
+    UniqueConstraint(
+      "variant_uid",
+      "sku_number",
+      name="uq_items_variant_sku_number",
+    ),
+  )
 
 class ItemsVariantModel(Base):
   __tablename__ = "items_variant"
 
   uid: Mapped[uuid.UUID] = mapped_column(primary_key=True, index=True, default=uuid.uuid7)
   name: Mapped[str] = mapped_column(String(128), nullable=False, unique=True)
-  sku_name: Mapped[str] = mapped_column(String(5), nullable=False, unique=True)
+  sku_code: Mapped[str] = mapped_column(String(5), nullable=False, unique=True)
 
   items: Mapped[list[ItemsModel]] = relationship(
     "ItemsModel",
