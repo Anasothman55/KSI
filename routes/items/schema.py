@@ -5,8 +5,7 @@ from typing import Annotated, TYPE_CHECKING
 
 from pydantic import BaseModel, StringConstraints, Field, ConfigDict, computed_field
 
-from routes.varinats.schema import ItemsVariantReadCodeSchema
-
+from routes.varinats.schema import ItemsVariantResponseSchema
 
 ItemsBrand = Annotated[ #? nullable
   str, StringConstraints(max_length=128, min_length=2, pattern=r"^[A-Za-z0-9_]+$", strip_whitespace=True)
@@ -45,19 +44,20 @@ class ItemsSchema(ItemsEssentialSchema,ItemsExtraSchema,ItemsBaseSchema, ItemsNu
 class ItemsCreateSchema(ItemsBaseSchema, ItemsNullableSchema):
   formal_name: ItemsFormalName
   variant_uid: uuid.UUID
+  categories_uid: list[uuid.UUID] = []
 
   model_config = ConfigDict(
     extra="forbid",
     str_strip_whitespace=True
   )
 
-class ItemsCreateSchemaToSelect(ItemsCreateSchema):
-  sku_number: int
+
 
 class ItemsUpdateSchema(ItemsNullableSchema):
   title: ItemsTitle | None = None
   base_unit: UnitEnum | None = None
   formal_name: ItemsFormalName | None = None
+  categories_uid: list[uuid.UUID] = []
 
   model_config = ConfigDict(
     extra="forbid",
@@ -67,11 +67,17 @@ class ItemsUpdateSchema(ItemsNullableSchema):
 class ItemsReadMultiSchema(ItemsSchema):
   sku: str
 
+class ItemsReadSchema(ItemsSchema):
+  variant: ItemsVariantResponseSchema
+
 #! response
 
 class ItemsCreateResponseSchema(ItemsSchema):
   pass
 
+class ItemsReadResponseSchema(ItemsSchema):
+  sku: str
+  variant: ItemsVariantResponseSchema
 
 class ItemsReadMultiResponseSchema(BaseModel):
   data: list[ItemsReadMultiSchema]

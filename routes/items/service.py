@@ -2,24 +2,25 @@ import uuid
 from typing import Annotated, Any
 
 from fastapi import HTTPException, status
-from fastcrud import FastCRUD, paginated_response, compute_offset, JoinConfig
+from fastcrud import FastCRUD, JoinConfig, compute_offset, paginated_response
 from fastcrud.core.query import joins
 from rich import print
-from sqlalchemy import func, select, String, cast
+from sqlalchemy import String, cast, func, or_, select, insert, delete as sql_delete
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import selectinload, aliased
+from sqlalchemy.orm import aliased, selectinload
 
-from core.models import ItemsModel, ItemsVariantModel
-from routes.varinats.schema import ItemsVariantReadCodeSchema
+from core.models import ItemsModel, ItemsVariantModel, item_categories
 from routes.items.schema import (
   ItemsCreateSchema,
+  ItemsReadMultiSchema,
+  ItemsReadResponseSchema,
+  ItemsReadSchema,
   ItemsSchema,
   ItemsUpdateSchema,
-  ItemsReadMultiSchema,
-  ItemsCreateSchemaToSelect
 )
 from routes.shared.func import integrity_error_raise
+from routes.varinats.schema import ItemsVariantReadCodeSchema
 
 items_crud = FastCRUD(ItemsModel)
 
@@ -38,18 +39,27 @@ async def create(
       await db.execute(select(func.max(ItemsModel.sku_number)).where(ItemsModel.variant_uid == body.variant_uid))
     ).scalar_one()
 
+    async with db.begin():
+      item = ItemsModel(
+        **body.model_dump(exclude={'categories_uid'}),
+        sku_number= (max_number or 0) + 1
+      )
 
-    data= ItemsCreateSchemaToSelect(**body.model_dump(), sku_number= (max_number or 0) + 1)
+      db.add(item)
+      await db.flush()
 
-    item = (await items_crud.create(
-      db=db,
-      object=data,
-      schema_to_select=ItemsSchema,
-      commit=True,
-    ))
+      if body.categories_uid:
+        insert_stmt = insert(item_categories).values([
+          {
+            "item_uid": item.uid,
+            "category_uid": uids
+          }
+          for uids in body.categories_uid
+        ])
+        await db.execute(insert_stmt)
 
-    return item
-    
+      return item
+
   except IntegrityError as e:
     await db.rollback()
     integrity_error_raise(e)
@@ -58,7 +68,26 @@ async def read(
   db: AsyncSession, 
   uid: uuid.UUID
 ):
-  pass
+
+
+  res: ItemsModel | None = (await db.execute(
+    select(ItemsModel)
+    .options(
+      selectinload(ItemsModel.variant)
+    )
+    .where(ItemsModel.uid == uid)
+  )).scalar_one_or_none()
+  
+  if res is None:
+    raise HTTPException(
+      status_code= status.HTTP_404_NOT_FOUND,
+      detail="Items not found"
+    )
+
+  return {
+    "sku":f"{res.variant.sku_code}-{res.sku_number!s:0>6}",
+    **ItemsReadSchema.model_validate(res, from_attributes=True).model_dump(),
+  }
 
 async def read_multi(
   db: AsyncSession,
@@ -68,12 +97,14 @@ async def read_multi(
 ):
   filters = []
   if name is not None:
-    filters.append(ItemsModel.title.ilike(f"%{name}%"))
-
-  variant = aliased(ItemsVariantModel)
+    filters.append(
+      or_(
+        ItemsModel.title.ilike(f"%{name}%"),
+        ItemsModel.formal_name.ilike(f"%{name}%")
+      )
+    )
 
   offset = (page - 1) * items_per_page
-
   # Total count
   count_stmt = (
       select(func.count())
@@ -88,6 +119,7 @@ async def read_multi(
     "-",
     func.lpad(cast(ItemsModel.sku_number, String), 6, "0"),
   ).label("sku")
+  
 
   res = (await db.execute(
     select(ItemsModel,sku )
@@ -113,9 +145,51 @@ async def read_multi(
 async def update(
   db: AsyncSession, 
   uid: uuid.UUID, 
-  body: Any
+  body: ItemsUpdateSchema
 ):
-  pass
+  try:
+
+    async with db.begin():
+
+      item: ItemsModel | None = (await db.execute(
+        select(ItemsModel)
+        .where(ItemsModel.uid == uid)
+      )).scalar_one_or_none()
+
+      if item is None:
+        raise HTTPException(
+          status_code=status.HTTP_404_NOT_FOUND,
+          detail="The item does not exist",
+        )
+
+      update_data = body.model_dump(exclude_unset=True,exclude={"categories_uid"},)
+
+      for field, value in update_data.items():
+        setattr(item, field, value)
+
+      if body.categories_uid is not None:
+        await db.execute(
+          sql_delete(item_categories).where(item_categories.c.item_uid == item.uid)
+        )
+
+        if body.categories_uid:
+          await db.execute(
+            insert(item_categories).values([
+              {
+                "item_uid": item.uid,
+                "category_uid": category_uid,
+              }
+              for category_uid in body.categories_uid
+            ])
+          )
+
+        await db.flush()
+
+        return item
+
+  except IntegrityError as e:
+    await db.rollback()
+    integrity_error_raise(e)
 
 async def delete(
   db: AsyncSession,

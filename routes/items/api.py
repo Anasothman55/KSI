@@ -10,8 +10,9 @@ from core.models import UnitEnum
 from routes.items.schema import (
   ItemsCreateResponseSchema,
   ItemsCreateSchema,
+  ItemsReadMultiResponseSchema,
+  ItemsReadResponseSchema,
   ItemsUpdateSchema,
-  ItemsReadMultiResponseSchema
 )
 from routes.items.service import create, delete, read, read_multi, update
 
@@ -48,7 +49,7 @@ async def read_items(
   return await read_multi(db=db, name=name, page=page or 1, items_per_page=items_per_page or 10)
 
 
-@api.get("/{uid}")
+@api.get("/{uid}", response_model=ItemsReadResponseSchema)
 async def read_item(
     db: Annotated[AsyncSession, Depends(get_db)],
     uid: uuid.UUID,
@@ -70,4 +71,10 @@ async def delete_item(
     db: Annotated[AsyncSession, Depends(get_db)],
     uid: uuid.UUID
 ):
-  return await delete(db=db, uid=uid)
+  #return await delete(db=db, uid=uid)
+  return JSONResponse(
+    status_code=status.HTTP_200_OK,
+    content={
+      "message": "Item delete don't work",
+    }
+  )
