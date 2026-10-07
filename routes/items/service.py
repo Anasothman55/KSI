@@ -10,7 +10,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased, selectinload
 
-from core.models import ItemsModel, ItemsVariantModel, item_categories
+from core.models import ItemsModel, ItemsVariantModel, item_categories, CategoriesModel, ItemsInventoryModel
 from routes.items.schema import (
   ItemsCreateSchema,
   ItemsReadMultiSchema,
@@ -30,6 +30,23 @@ async def create(
 ):
   try:
 
+    category_uids = list(set(body.categories_uid))
+
+    if category_uids:
+      result = await db.execute(
+        select(CategoriesModel.uid).where(CategoriesModel.uid.in_(category_uids))
+      )
+
+      existing_uids = set(result.scalars().all())
+      missing_uids = set(category_uids) - existing_uids
+
+      if missing_uids:
+        raise HTTPException(
+          status_code=status.HTTP_404_NOT_FOUND,
+          detail=f"Category does not exist: {next(iter(missing_uids))}",
+        )
+
+
     variant: ItemsVariantModel | None = (await db.execute(select(ItemsVariantModel).where(ItemsVariantModel.uid == body.variant_uid))).scalar_one_or_none()
 
     if variant is None:
@@ -48,15 +65,16 @@ async def create(
       db.add(item)
       await db.flush()
 
-      if body.categories_uid:
-        insert_stmt = insert(item_categories).values([
-          {
-            "item_uid": item.uid,
-            "category_uid": uids
-          }
-          for uids in body.categories_uid
-        ])
-        await db.execute(insert_stmt)
+      if category_uids:
+        await db.execute(
+          insert(item_categories).values([
+            {
+              "item_uid": item.uid,
+              "category_uid": uids
+            }
+            for uids in body.categories_uid
+          ])
+        )
 
       return item
 
@@ -69,11 +87,15 @@ async def read(
   uid: uuid.UUID
 ):
 
-
   res: ItemsModel | None = (await db.execute(
     select(ItemsModel)
     .options(
-      selectinload(ItemsModel.variant)
+      selectinload(ItemsModel.variant),
+      selectinload(ItemsModel.categories).load_only(CategoriesModel.name),
+      selectinload(ItemsModel.inventory).load_only(
+        ItemsInventoryModel.owner,
+        ItemsInventoryModel.condition
+      )
     )
     .where(ItemsModel.uid == uid)
   )).scalar_one_or_none()
@@ -149,6 +171,23 @@ async def update(
 ):
   try:
 
+    category_uids = list(set(body.categories_uid))
+
+    if category_uids:
+      result = await db.execute(
+        select(CategoriesModel.uid).where(CategoriesModel.uid.in_(category_uids))
+      )
+
+      existing_uids = set(result.scalars().all())
+      missing_uids = set(category_uids) - existing_uids
+
+      if missing_uids:
+        raise HTTPException(
+          status_code=status.HTTP_404_NOT_FOUND,
+          detail=f"Category does not exist: {next(iter(missing_uids))}",
+        )
+
+
     async with db.begin():
 
       item: ItemsModel | None = (await db.execute(
@@ -172,7 +211,7 @@ async def update(
           sql_delete(item_categories).where(item_categories.c.item_uid == item.uid)
         )
 
-        if body.categories_uid:
+        if category_uids:
           await db.execute(
             insert(item_categories).values([
               {
@@ -185,7 +224,7 @@ async def update(
 
         await db.flush()
 
-        return item
+    return item
 
   except IntegrityError as e:
     await db.rollback()

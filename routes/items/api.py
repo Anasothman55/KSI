@@ -13,13 +13,19 @@ from routes.items.schema import (
   ItemsReadMultiResponseSchema,
   ItemsReadResponseSchema,
   ItemsUpdateSchema,
+  ItemsUpdateResponseSchema
 )
 from routes.items.service import create, delete, read, read_multi, update
+from routes.items.inventory.api import api as inventory_api
+
+items_api = APIRouter(prefix="/items")
 
 api = APIRouter(
-  prefix="/items",
   tags=["Items"],
 )
+
+items_api.include_router(inventory_api)
+items_api.include_router(api)
 
 @api.get('/enum')
 async def get_enum():
@@ -57,16 +63,16 @@ async def read_item(
   return await read(db=db, uid=uid)
 
 
-@api.patch("/{uid}", response_model=Any, status_code=status.HTTP_200_OK)
+@api.patch("/{uid}", response_model=ItemsUpdateResponseSchema, status_code=status.HTTP_200_OK)
 async def update_item(
     db: Annotated[AsyncSession, Depends(get_db)],
     uid: uuid.UUID,
-    body: Any,
+    body: ItemsUpdateSchema,
 ):
   return await update(db=db, uid=uid, body=body)
 
 
-@api.delete("/{uid}", status_code=status.HTTP_204_NO_CONTENT)
+@api.delete("/{uid}", status_code=status.HTTP_204_NO_CONTENT, deprecated=True)
 async def delete_item(
     db: Annotated[AsyncSession, Depends(get_db)],
     uid: uuid.UUID

@@ -9,7 +9,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from core.lifespan import lifespan
 from routes.categories.api import api as categories_api
-from routes.items.api import api as items_api
+from routes.items.api import items_api
 from routes.users.api import api as users_api
 from routes.varinats.api import api as variant_api
 

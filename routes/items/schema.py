@@ -6,6 +6,8 @@ from typing import Annotated, TYPE_CHECKING
 from pydantic import BaseModel, StringConstraints, Field, ConfigDict, computed_field
 
 from routes.varinats.schema import ItemsVariantResponseSchema
+from routes.categories.schema import BaseCategoriesSchema
+from routes.items.inventory.schema import InventoryBaseSchema
 
 ItemsBrand = Annotated[ #? nullable
   str, StringConstraints(max_length=128, min_length=2, pattern=r"^[A-Za-z0-9_]+$", strip_whitespace=True)
@@ -69,15 +71,19 @@ class ItemsReadMultiSchema(ItemsSchema):
 
 class ItemsReadSchema(ItemsSchema):
   variant: ItemsVariantResponseSchema
+  categories: list[BaseCategoriesSchema]
+  inventory: list[InventoryBaseSchema]
 
 #! response
 
 class ItemsCreateResponseSchema(ItemsSchema):
   pass
 
-class ItemsReadResponseSchema(ItemsSchema):
+class ItemsUpdateResponseSchema(ItemsSchema):
+  pass
+
+class ItemsReadResponseSchema(ItemsReadSchema):
   sku: str
-  variant: ItemsVariantResponseSchema
 
 class ItemsReadMultiResponseSchema(BaseModel):
   data: list[ItemsReadMultiSchema]
