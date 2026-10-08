@@ -17,6 +17,7 @@ from routes.items.schema import (
 )
 from routes.items.service import create, delete, read, read_multi, update
 from routes.items.inventory.api import api as inventory_api
+from routes.items.packagin.api import api as packaging_api
 
 items_api = APIRouter(prefix="/items")
 
@@ -25,6 +26,7 @@ api = APIRouter(
 )
 
 items_api.include_router(inventory_api)
+items_api.include_router(packaging_api)
 items_api.include_router(api)
 
 @api.get('/enum')

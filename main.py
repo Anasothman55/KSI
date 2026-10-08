@@ -7,7 +7,7 @@ from fastapi.exception_handlers import (
 from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from core.lifespan import lifespan
+from core.lifespan import lifespan, tag_metadata
 from routes.categories.api import api as categories_api
 from routes.items.api import items_api
 from routes.users.api import api as users_api
@@ -23,6 +23,7 @@ app = FastAPI(
   },
 
   lifespan=lifespan,
+  openapi_tags= tag_metadata
 )
 
 

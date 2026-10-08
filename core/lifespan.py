@@ -4,7 +4,15 @@ from rich import print
 
 from core.db import db_init, close_db
 
-
+tag_metadata= [
+  {"name": "Users Crud"},
+  {"name": "Categories"},
+  {"name": "Variants"},
+  {
+    "name": "Items",
+    "description": "after we add transaction route go to add selection load for items get so we can get the packaging level"
+  }
+]
 @asynccontextmanager
 async def lifespan(app: FastAPI):
   try:
