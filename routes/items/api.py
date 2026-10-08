@@ -48,7 +48,7 @@ async def create_item(
 
 
 @api.get("/", response_model=ItemsReadMultiResponseSchema)
-async def read_items(
+async def read_multi_items(
     db: Annotated[AsyncSession, Depends(get_db)],
     name: Annotated[str | None, Query(max_length=128)] = None,
     page: Annotated[int | None, Query(ge=1)] = 1,

@@ -11,7 +11,11 @@ tag_metadata= [
   {
     "name": "Items",
     "description": "after we add transaction route go to add selection load for items get so we can get the packaging level"
-  }
+  },
+  {"name": "Inventory"},
+  {"name": "Packaging"},
+  {"name": "Transactions"},
+  {"name": "Asset Movement"}
 ]
 @asynccontextmanager
 async def lifespan(app: FastAPI):

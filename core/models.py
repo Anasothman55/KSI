@@ -14,7 +14,8 @@ from sqlalchemy import (
   Table,
   Text,
   UniqueConstraint,
-  Integer
+  Integer,
+  DateTime
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -65,6 +66,11 @@ class UsersModel(Base):
     "UsersModel",
     back_populates="manager",
     lazy='select',
+  )
+
+  transactions: Mapped[list["TransactionModel"]] = relationship(
+    "TransactionModel",
+    back_populates="purchaser",
   )
 
 
@@ -204,6 +210,12 @@ class ItemsInventoryModel(Base):
   item_uid: Mapped[uuid.UUID] = mapped_column(ForeignKey("items.uid", ondelete="CASCADE"), nullable=False)
   item: Mapped[ItemsModel] = relationship("ItemsModel", back_populates="inventory")
 
+  asset_movements: Mapped[list["AssetMovementModel"]] = relationship(
+    "AssetMovementModel",
+    back_populates="item_inventory",
+    cascade="all, delete-orphan",
+  )
+
   created_at: Mapped[datetime] = mapped_column(
       TIMESTAMP(timezone=False), default=PROJECT_DATETIME.get_datetime
   )
@@ -233,7 +245,86 @@ class PackagingModel(Base):
   )
 
 
+class TransactionTypeEnum(StrEnum):
+  MAINTENANCE = "maintenance"
+  PURCHASE = "purchase"
+  SEND_BACK = "send_back"
+  BARROW = "barrow"
+  RETURN = "return"
+  USAGE = "usage"
+  ADJUSTMENT = "adjustment"
+  WRITE_OFF = "write_off"
+  SALE = "sale"
+  ASSEMBLY = "assembly"
+  DISASSEMBLY = "disassembly"
+
+class TransactionOperationEnum(StrEnum):
+  IN = "in"
+  OUT = "out"
+  INTERNAL = "internal"
 
 
+class TransactionModel(Base):
+  __tablename__ = "transaction"
 
+  uid: Mapped[uuid.UUID] = mapped_column(primary_key=True, index=True, default=uuid.uuid4)
+
+  title: Mapped[str] = mapped_column(String(64), nullable=False)
+  t_date: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+  t_type: Mapped[TransactionTypeEnum] = mapped_column(
+    Enum(TransactionTypeEnum, name="transaction_type_enum", create_type=True, values_callable=lambda e: [m.value for m in e]), nullable=False, default=TransactionTypeEnum.USAGE.value
+  )
+  t_operations: Mapped[TransactionOperationEnum] = mapped_column(
+    Enum(TransactionOperationEnum, name="transaction_operation_enum", create_type=True, values_callable=lambda e: [m.value for m in e]), nullable=False, default=TransactionOperationEnum.OUT.value
+  )
+  note: Mapped[str | None] = mapped_column(Text, nullable=True, )
+
+  # purchase
+  purchaser_uid: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("users.uid", ondelete="SET NULL"), nullable=True)
+  purchaser: Mapped[UsersModel | None] = relationship(
+    "UsersModel",
+    back_populates="transactions",
+  )
+  asset_movements: Mapped[list["AssetMovementModel"]] = relationship(
+    "AssetMovementModel",
+    back_populates="transaction",
+    cascade="all, delete-orphan",
+  )
+  supplier: Mapped[str | None] = mapped_column(String(64), nullable=True)
+  total_amount: Mapped[Decimal | None] = mapped_column(Numeric, nullable=True)
+  currency: Mapped[str | None] = mapped_column(String(10), nullable=True)
+  recip: Mapped[str | None] = mapped_column(String(64), nullable=True)
+
+  created_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=False), default=PROJECT_DATETIME.get_datetime)
+  updated_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=False),default=PROJECT_DATETIME.get_datetime,onupdate=PROJECT_DATETIME.get_datetime,)
+
+
+  __table_args__ = (
+    UniqueConstraint("recip", "supplier"),
+  )
+
+
+class AssetMovementModel(Base):
+  __tablename__ = "asset_movement"
+
+  uid: Mapped[uuid.UUID] = mapped_column(primary_key=True, index=True, default=uuid.uuid4)
+
+  transaction_uid: Mapped[uuid.UUID] = mapped_column(ForeignKey("transaction.uid", ondelete="CASCADE"), nullable=False)
+  transaction: Mapped[TransactionModel] = relationship(
+    "TransactionModel",
+    back_populates="asset_movements",
+  )
+  item_inventory_uid: Mapped[uuid.UUID] = mapped_column(ForeignKey("items_inventory.uid", ondelete="CASCADE"), nullable=False)
+  item_inventory: Mapped[ItemsInventoryModel] = relationship(
+    "ItemsInventoryModel",
+    back_populates="asset_movements",
+  )
+  quantity: Mapped[Decimal] = mapped_column(Numeric, nullable=False,)
+
+  unite_price: Mapped[Decimal | None] = mapped_column(Numeric, nullable=True,)
+
+  note: Mapped[str | None] = mapped_column(Text, nullable=True,)
+
+  created_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=False), default=PROJECT_DATETIME.get_datetime)
+  updated_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=False),default=PROJECT_DATETIME.get_datetime,onupdate=PROJECT_DATETIME.get_datetime,)
 
