@@ -6,16 +6,17 @@ from enum import StrEnum
 from sqlalchemy import (
   TIMESTAMP,
   UUID,
+  Boolean,
   Column,
+  DateTime,
   Enum,
   ForeignKey,
+  Integer,
   Numeric,
   String,
   Table,
   Text,
   UniqueConstraint,
-  Integer,
-  DateTime
 )
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -246,15 +247,20 @@ class PackagingModel(Base):
 
 
 class TransactionTypeEnum(StrEnum):
+  # out
   MAINTENANCE = "maintenance"
-  PURCHASE = "purchase"
   SEND_BACK = "send_back"
   BARROW = "barrow"
-  RETURN = "return"
   USAGE = "usage"
+  SALE = "sale"
+
+  # in
+  PURCHASE = "purchase"
+  RETURN = "return"
+
+  # internal
   ADJUSTMENT = "adjustment"
   WRITE_OFF = "write_off"
-  SALE = "sale"
   ASSEMBLY = "assembly"
   DISASSEMBLY = "disassembly"
 
@@ -265,18 +271,20 @@ class TransactionOperationEnum(StrEnum):
 
 
 class TransactionModel(Base):
+
   __tablename__ = "transaction"
 
   uid: Mapped[uuid.UUID] = mapped_column(primary_key=True, index=True, default=uuid.uuid4)
 
   title: Mapped[str] = mapped_column(String(64), nullable=False)
-  t_date: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+  t_date: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=PROJECT_DATETIME.get_datetime())
   t_type: Mapped[TransactionTypeEnum] = mapped_column(
     Enum(TransactionTypeEnum, name="transaction_type_enum", create_type=True, values_callable=lambda e: [m.value for m in e]), nullable=False, default=TransactionTypeEnum.USAGE.value
   )
   t_operations: Mapped[TransactionOperationEnum] = mapped_column(
     Enum(TransactionOperationEnum, name="transaction_operation_enum", create_type=True, values_callable=lambda e: [m.value for m in e]), nullable=False, default=TransactionOperationEnum.OUT.value
   )
+  is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
   note: Mapped[str | None] = mapped_column(Text, nullable=True, )
 
   # purchase
@@ -285,11 +293,7 @@ class TransactionModel(Base):
     "UsersModel",
     back_populates="transactions",
   )
-  asset_movements: Mapped[list["AssetMovementModel"]] = relationship(
-    "AssetMovementModel",
-    back_populates="transaction",
-    cascade="all, delete-orphan",
-  )
+
   supplier: Mapped[str | None] = mapped_column(String(64), nullable=True)
   total_amount: Mapped[Decimal | None] = mapped_column(Numeric, nullable=True)
   currency: Mapped[str | None] = mapped_column(String(10), nullable=True)
@@ -298,6 +302,11 @@ class TransactionModel(Base):
   created_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=False), default=PROJECT_DATETIME.get_datetime)
   updated_at: Mapped[datetime] = mapped_column(TIMESTAMP(timezone=False),default=PROJECT_DATETIME.get_datetime,onupdate=PROJECT_DATETIME.get_datetime,)
 
+  asset_movements: Mapped[list["AssetMovementModel"]] = relationship(
+    "AssetMovementModel",
+    back_populates="transaction",
+    cascade="all, delete-orphan",
+  )
 
   __table_args__ = (
     UniqueConstraint("recip", "supplier"),

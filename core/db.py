@@ -1,10 +1,10 @@
-from psycopg import OperationalError as PsycopgOperationalError
-
-from sqlalchemy.exc import OperationalError
 from typing import Any
-from sqlalchemy.ext.asyncio.engine import AsyncEngine
-from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
+
+from psycopg import OperationalError as PsycopgOperationalError
 from sqlalchemy import text
+from sqlalchemy.exc import OperationalError
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlalchemy.ext.asyncio.engine import AsyncEngine
 from sqlalchemy.orm import DeclarativeBase
 
 from core.config import settings
@@ -12,8 +12,6 @@ from core.config import settings
 
 class Base(DeclarativeBase):
   pass
-
-
 
 
 engine: AsyncEngine = create_async_engine(

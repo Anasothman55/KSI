@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class BaseSchema(BaseModel):
@@ -41,5 +41,9 @@ class ReadResponseSchema:
 
 class ReadMultiResponseSchema:
   pass
+
+
+# query
+
 
 
