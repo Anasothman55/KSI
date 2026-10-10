@@ -1,13 +1,15 @@
 import uuid
 from typing import Any
+from rich import print
 
 from fastapi import HTTPException, status
-from sqlalchemy import select, or_
+from sqlalchemy import select, or_, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.models import TransactionModel, TransactionOperationEnum, UsersModel
 from core.models import TransactionTypeEnum as TTE
 from routes.Transaction.schema import TransactionsCreateSchema, TransactionReadMultiQuery
+from routes.shared.filters import apply_filter
 
 
 async def create(
@@ -19,9 +21,10 @@ async def create(
   if body.t_type in [TTE.PURCHASE, TTE.RETURN]: operation = TransactionOperationEnum.IN
   if body.t_type in [TTE.ADJUSTMENT, TTE.WRITE_OFF, TTE.ASSEMBLY, TTE.DISASSEMBLY]: operation = TransactionOperationEnum.INTERNAL
 
-  purchaser_user = (await db.execute(select(UsersModel).where(UsersModel.uid == body.purchaser_uid))).scalar_one_or_none()
-  if not purchaser_user:
-    raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Purchaser user does not exist")
+  if body.purchaser_uid is not None:
+    purchaser_user = (await db.execute(select(UsersModel).where(UsersModel.uid == body.purchaser_uid))).scalar_one_or_none()
+    if not purchaser_user:
+      raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Purchaser user does not exist")
 
   new_transaction = TransactionModel(
     **body.model_dump(exclude_none=True),
@@ -38,10 +41,55 @@ async def create(
 async def read_multi(
     db: AsyncSession,
     filters_query: TransactionReadMultiQuery,
-    page: int = 1,
-    items_per_page: int = 100
 ):
-  pass
+
+  print(filters_query)
+  print(filters_query.model_dump())
+  print(filters_query.model_dump(exclude_none=True, exclude={"page", "items_per_page", "search"}))
+
+  where = []
+  if filters_query.search:
+    where.append(
+      or_(
+        TransactionModel.title.ilike(f"%{filters_query.search}%"),
+        TransactionModel.note.ilike(f"%{filters_query.search}%"),
+      )
+    )
+  
+  print(select(TransactionModel, ).where(*where))
+
+  page = filters_query.page or 1
+  items_per_page = filters_query.items_per_page
+
+  offset = (page - 1) * items_per_page
+  # Total count
+  total_count = (await db.scalar(
+    select(func.count())
+    .select_from(TransactionModel)
+    .where(*where)
+  ))
+
+  print(    select(TransactionModel, )
+    .where(*where)
+    .offset(offset)
+    .limit(items_per_page))
+
+  res = (await db.execute(
+    select(TransactionModel, )
+    .where(*where)
+    .offset(offset)
+    .limit(items_per_page)
+  )).scalars().all()
+
+
+  return {
+    "data": res,
+    "total_count": total_count,
+    "page": page,
+    "items_per_page": items_per_page,
+    "has_more": offset < total_count
+  }
+
 
 async def read(
     db: AsyncSession,

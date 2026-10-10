@@ -274,7 +274,7 @@ class TransactionModel(Base):
 
   __tablename__ = "transaction"
 
-  uid: Mapped[uuid.UUID] = mapped_column(primary_key=True, index=True, default=uuid.uuid4)
+  uid: Mapped[uuid.UUID] = mapped_column(primary_key=True, index=True, default=uuid.uuid7)
 
   title: Mapped[str] = mapped_column(String(64), nullable=False)
   t_date: Mapped[datetime] = mapped_column(DateTime, nullable=False, default=PROJECT_DATETIME.get_datetime())
@@ -316,7 +316,7 @@ class TransactionModel(Base):
 class AssetMovementModel(Base):
   __tablename__ = "asset_movement"
 
-  uid: Mapped[uuid.UUID] = mapped_column(primary_key=True, index=True, default=uuid.uuid4)
+  uid: Mapped[uuid.UUID] = mapped_column(primary_key=True, index=True, default=uuid.uuid7)
 
   transaction_uid: Mapped[uuid.UUID] = mapped_column(ForeignKey("transaction.uid", ondelete="CASCADE"), nullable=False)
   transaction: Mapped[TransactionModel] = relationship(

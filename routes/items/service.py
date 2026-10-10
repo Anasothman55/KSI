@@ -5,12 +5,19 @@ from fastapi import HTTPException, status
 from fastcrud import FastCRUD, JoinConfig, compute_offset, paginated_response
 from fastcrud.core.query import joins
 from rich import print
-from sqlalchemy import String, cast, func, or_, select, insert, delete as sql_delete
+from sqlalchemy import String, cast, func, insert, or_, select
+from sqlalchemy import delete as sql_delete
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import aliased, selectinload
 
-from core.models import ItemsModel, ItemsVariantModel, item_categories, CategoriesModel, ItemsInventoryModel
+from core.models import (
+  CategoriesModel,
+  ItemsInventoryModel,
+  ItemsModel,
+  ItemsVariantModel,
+  item_categories,
+)
 from routes.items.schema import (
   ItemsCreateSchema,
   ItemsReadMultiSchema,

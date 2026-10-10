@@ -2,13 +2,16 @@ import uuid
 from dataclasses import dataclass
 from datetime import date, datetime
 from decimal import Decimal
-from typing import Annotated, Literal, LiteralString
+from typing import Annotated, Literal, LiteralString, TypedDict
 
-from pydantic import BaseModel, StringConstraints, Field, ConfigDict, model_validator, TypeAdapter, ValidationError
+from pydantic import BaseModel, StringConstraints, Field, ConfigDict, model_validator, TypeAdapter, ValidationError, \
+  create_model
 from pydantic_core import PydanticCustomError, InitErrorDetails
+from sqlalchemy import or_
 
 from core.config import PROJECT_DATETIME
-from core.models import TransactionTypeEnum, TransactionOperationEnum
+from core.models import TransactionTypeEnum, TransactionOperationEnum, TransactionModel
+from routes.shared.filters import Filter, FilterOp, FilterOpList, create_field
 
 TransactionTitle= Annotated[str, StringConstraints(min_length=1, max_length=64, strip_whitespace=True)]
 TransactionsDateTime = Annotated[datetime, Field(le=PROJECT_DATETIME.get_datetime())]
@@ -113,12 +116,23 @@ class TransactionsReadMultiResponseSchema:
 
 # query
 
+class FilterBase(BaseModel):
+  page: int | None = Field(1, ge=1)
+  items_per_page: int | None = Field(100, ge=1, le=100)
 
-class TransactionReadMultiQuery(BaseModel):
+TransactionNameFilter = create_model(
+  "TransactionNameFilter",
+  **create_field("title", op=["eq", "il", 'in'])
+)
+
+class TransactionReadMultiQuery(FilterBase,TransactionNameFilter):
   search: str | None = Field(None)
 
 
-
+  model_config = ConfigDict(
+      extra="forbid",
+      str_strip_whitespace=True,
+  )
 
 
 

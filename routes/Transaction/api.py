@@ -7,6 +7,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from core.deps import get_db
 from routes.Transaction.service import create, read, read_multi, update, delete
 from routes.Transaction.asset_movement.api import api as movement_api
+from routes.Transaction.schema import (
+  TransactionsCreateSchema,
+  TransactionsCreateResponseSchema, TransactionReadMultiQuery
+)
 
 transaction_api = APIRouter(prefix="/transaction")
 
@@ -18,21 +22,19 @@ transaction_api.include_router(movement_api)
 transaction_api.include_router(api)
 
 
-@api.post("/")
+@api.post("/", response_model=TransactionsCreateResponseSchema)
 async def create_transaction(
     db: Annotated[AsyncSession, Depends(get_db)],
-    body: Any
+    body: TransactionsCreateSchema
 ):
   return await create(db, body)
 
 @api.get("/")
 async def read_multi_transaction(
     db: Annotated[AsyncSession, Depends(get_db)],
-    search: Annotated[str | None, Query(max_length=128)] = None,
-    page: Annotated[int | None, Query(ge=1)] = 1,
-    items_per_page: Annotated[int | None, Query(ge=1, le=100)] = 100
+    filters_query: Annotated[TransactionReadMultiQuery, Query()],
 ):
-  return await read_multi(db, search, page or 1, items_per_page or 100)
+  return await read_multi(db, filters_query)
 
 
 @api.get("/{uid}")
