@@ -1,6 +1,9 @@
 import uuid
 from typing import Any
+
+from pygments.lexer import Lexer
 from rich import print
+from rich.syntax import Syntax
 
 from fastapi import HTTPException, status
 from sqlalchemy import select, or_, func
@@ -9,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from core.models import TransactionModel, TransactionOperationEnum, UsersModel
 from core.models import TransactionTypeEnum as TTE
 from routes.Transaction.schema import TransactionsCreateSchema, TransactionReadMultiQuery
-from routes.shared.filters import apply_filter
+from routes.shared.filters import apply_filter, create_where
 
 
 async def create(
@@ -43,10 +46,6 @@ async def read_multi(
     filters_query: TransactionReadMultiQuery,
 ):
 
-  print(filters_query)
-  print(filters_query.model_dump())
-  print(filters_query.model_dump(exclude_none=True, exclude={"page", "items_per_page", "search"}))
-
   where = []
   if filters_query.search:
     where.append(
@@ -55,8 +54,9 @@ async def read_multi(
         TransactionModel.note.ilike(f"%{filters_query.search}%"),
       )
     )
-  
-  print(select(TransactionModel, ).where(*where))
+  filter_column = filters_query.model_dump(exclude_none=True, exclude={"page", "items_per_page", "search"})
+
+  where.append(or_(*create_where(TransactionModel.title, filter_column)))
 
   page = filters_query.page or 1
   items_per_page = filters_query.items_per_page
@@ -68,11 +68,6 @@ async def read_multi(
     .select_from(TransactionModel)
     .where(*where)
   ))
-
-  print(    select(TransactionModel, )
-    .where(*where)
-    .offset(offset)
-    .limit(items_per_page))
 
   res = (await db.execute(
     select(TransactionModel, )
